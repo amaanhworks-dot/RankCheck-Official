@@ -1,49 +1,175 @@
 import { useNavigate } from 'react-router-dom';
-import { Crosshair, Move, Zap, RotateCcw } from 'lucide-react';
+import { Crosshair, Move, Zap, RotateCcw, Trophy, Loader2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useTest } from '@/context/TestContext';
+import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
 
-type SummaryCard = {
-  icon: typeof Crosshair;
+type ScoreEntry = {
+  id: string;
+  aim_score: number;
+  dex_score: number;
+  reax_score: number;
+  composite_score: number;
+  created_at: string;
+  gamer_tag: string;
+};
+
+type BestScores = {
+  bestAim: number;
+  bestMovement: number;
+  bestReflex: number;
+  bestComposite: number;
+};
+
+type Rank = {
   label: string;
-  score: number;
+  color: string;
+  minScore: number;
 };
 
-type HistoryEntry = {
-  date: string;
-  aim: number;
-  movement: number;
-  reflex: number;
-  percentile: string;
-};
-
-const summaryCards: SummaryCard[] = [
-  { icon: Crosshair, label: 'Best Aim', score: 94 },
-  { icon: Move, label: 'Best Movement', score: 82 },
-  { icon: Zap, label: 'Best Reflex', score: 88 },
+const RANKS: Rank[] = [
+  { label: 'Radiant', color: '#fbbf24', minScore: 270 },
+  { label: 'Immortal', color: '#c084fc', minScore: 220 },
+  { label: 'Diamond', color: '#60a5fa', minScore: 170 },
+  { label: 'Platinum', color: '#34d399', minScore: 120 },
+  { label: 'Gold', color: '#f59e0b', minScore: 70 },
+  { label: 'Bronze', color: '#d97706', minScore: 0 },
 ];
 
-const history: HistoryEntry[] = [
-  { date: 'Aug 16, 2026', aim: 92, movement: 78, reflex: 85, percentile: 'Top 5%' },
-  { date: 'Aug 10, 2026', aim: 88, movement: 71, reflex: 80, percentile: 'Top 12%' },
-  { date: 'Aug 2, 2026', aim: 79, movement: 65, reflex: 74, percentile: 'Top 23%' },
-];
+function getRank(score: number): Rank {
+  for (const rank of RANKS) {
+    if (score >= rank.minScore) return rank;
+  }
+  return RANKS[RANKS.length - 1];
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { gamertag } = useTest();
-  const hasHistory = true;
+  const { gamertag, anonId } = useTest();
+  const [history, setHistory] = useState<ScoreEntry[]>([]);
+  const [bestScores, setBestScores] = useState<BestScores>({
+    bestAim: 0,
+    bestMovement: 0,
+    bestReflex: 0,
+    bestComposite: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!hasHistory) {
+  // Fetch data from Supabase
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!anonId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const { data, error: supabaseError } = await supabase
+          .from('user_scores')
+          .select('*')
+          .eq('user_id', anonId)
+          .order('created_at', { ascending: false });
+
+        if (supabaseError) {
+          console.error('Supabase fetch error:', supabaseError);
+          setError('Failed to load history. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setHistory(data);
+
+          // Calculate best scores
+          const bestAim = Math.max(...data.map((row: ScoreEntry) => row.aim_score));
+          const bestMovement = Math.max(...data.map((row: ScoreEntry) => row.dex_score));
+          const bestReflex = Math.max(...data.map((row: ScoreEntry) => row.reax_score));
+          const bestComposite = Math.max(...data.map((row: ScoreEntry) => row.composite_score));
+
+          setBestScores({
+            bestAim,
+            bestMovement,
+            bestReflex,
+            bestComposite,
+          });
+        } else {
+          setHistory([]);
+          setBestScores({
+            bestAim: 0,
+            bestMovement: 0,
+            bestReflex: 0,
+            bestComposite: 0,
+          });
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        setError('Something went wrong. Please refresh and try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [anonId]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-text-secondary">Loading your history...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+          <div className="flex flex-col items-center text-center max-w-md w-full">
+            <p className="text-red-400 text-lg font-semibold">⚠️ {error}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl border border-primary px-6 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Empty state (no attempts yet)
+  if (history.length === 0) {
     return (
       <Layout>
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
           <div className="flex flex-col items-center text-center max-w-md w-full animate-fade-in-up">
-            <h1 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-wider text-white">
+            <Trophy className="h-16 w-16 text-text-secondary/30" />
+            <h1 className="mt-4 font-heading text-3xl sm:text-4xl font-extrabold tracking-wider text-white">
               No attempts yet
             </h1>
             <p className="mt-3 text-sm sm:text-base text-text-secondary">
-              Take the gauntlet to see your stats here.
+              {gamertag ? `${gamertag}, take the gauntlet to see your stats here.` : 'Take the gauntlet to see your stats here.'}
             </p>
             <button
               type="button"
@@ -58,85 +184,129 @@ export default function Dashboard() {
     );
   }
 
+  // Get current rank from best composite
+  const currentRank = getRank(bestScores.bestComposite);
+
   return (
     <Layout>
       <div className="flex-1 flex flex-col px-4 sm:px-6 py-8 max-w-4xl w-full mx-auto animate-fade-in">
         {/* Header row */}
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-wide text-white">
-            Welcome back, {gamertag || 'Player'}
-          </h1>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="rounded-xl border border-primary px-5 py-2.5 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary/10 hover:shadow-primary-glow active:scale-[0.98]"
-          >
-            <span className="inline-flex items-center gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Retake test
-            </span>
-          </button>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-wide text-white">
+              {gamertag ? `${gamertag}'s Dashboard` : 'Dashboard'}
+            </h1>
+            <p className="mt-1 text-sm text-text-secondary">
+              {history.length} attempt{history.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Rank badge */}
+            <div
+              className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold"
+              style={{
+                borderColor: currentRank.color,
+                color: currentRank.color,
+                backgroundColor: `${currentRank.color}10`,
+              }}
+            >
+              <Trophy className="h-4 w-4" />
+              {currentRank.label}
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="rounded-xl border border-primary px-4 py-2.5 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary/10 hover:shadow-primary-glow active:scale-[0.98]"
+            >
+              <span className="inline-flex items-center gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Retake test
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* Summary cards */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {summaryCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.label}
-                className="rounded-2xl bg-surface border border-border p-5 transition-all duration-200 hover:border-primary/50"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary-glow">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h3 className="font-heading text-base font-semibold text-white">
-                    {card.label}
-                  </h3>
-                </div>
-                <p className="mt-3 font-heading text-3xl font-bold text-white">
-                  {card.score}
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">pts</p>
-              </div>
-            );
-          })}
+        {/* Best scores summary cards */}
+        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
+            <p className="text-xs text-text-secondary uppercase tracking-wider">Best Aim</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestAim}</p>
+          </div>
+          <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
+            <p className="text-xs text-text-secondary uppercase tracking-wider">Best Movement</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestMovement}</p>
+          </div>
+          <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
+            <p className="text-xs text-text-secondary uppercase tracking-wider">Best Reflex</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestReflex}</p>
+          </div>
+          <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
+            <p className="text-xs text-text-secondary uppercase tracking-wider">Best Composite</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestComposite}</p>
+          </div>
         </div>
 
         {/* History section */}
         <div className="mt-10">
           <h2 className="font-heading text-lg font-semibold text-white tracking-wide">
-            Your history
+            Attempt history
           </h2>
 
           <div className="mt-4 rounded-2xl border border-border overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-5 gap-2 bg-surface px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <div className="grid grid-cols-6 gap-2 bg-surface/50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
               <span>Date</span>
               <span className="text-center">Aim</span>
               <span className="text-center">Movement</span>
               <span className="text-center">Reflex</span>
-              <span className="text-right">Percentile</span>
+              <span className="text-center">Composite</span>
+              <span className="text-right">Rank</span>
             </div>
 
             {/* History rows */}
-            {history.map((entry, i) => (
-              <div
-                key={entry.date}
-                className="grid grid-cols-5 gap-2 px-4 py-3.5 text-sm transition-colors duration-150 hover:bg-primary/5"
-                style={{
-                  backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent',
-                }}
-              >
-                <span className="text-text-secondary">{entry.date}</span>
-                <span className="text-center font-heading font-semibold text-white">{entry.aim}</span>
-                <span className="text-center font-heading font-semibold text-white">{entry.movement}</span>
-                <span className="text-center font-heading font-semibold text-white">{entry.reflex}</span>
-                <span className="text-right font-heading font-bold text-primary-glow">{entry.percentile}</span>
-              </div>
-            ))}
+            {history.map((entry, i) => {
+              const rank = getRank(entry.composite_score);
+              return (
+                <div
+                  key={entry.id}
+                  className="grid grid-cols-6 gap-2 px-4 py-3.5 text-sm transition-colors duration-150 hover:bg-primary/5"
+                  style={{
+                    backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                  }}
+                >
+                  <span className="text-text-secondary">{formatDate(entry.created_at)}</span>
+                  <span className="text-center font-heading font-semibold text-white">{entry.aim_score}</span>
+                  <span className="text-center font-heading font-semibold text-white">{entry.dex_score}</span>
+                  <span className="text-center font-heading font-semibold text-white">{entry.reax_score}</span>
+                  <span className="text-center font-heading font-bold text-primary-glow">{entry.composite_score}</span>
+                  <span
+                    className="text-right font-heading font-bold"
+                    style={{ color: rank.color }}
+                  >
+                    {rank.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-end">
+          <button
+            type="button"
+            onClick={() => navigate('/flex-card')}
+            className="rounded-xl border border-primary px-6 py-3 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary/10 hover:shadow-primary-glow active:scale-[0.98]"
+          >
+            View your Flex Card
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-primary-glow hover:shadow-primary-glow-lg hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Take the gauntlet again
+          </button>
         </div>
       </div>
     </Layout>

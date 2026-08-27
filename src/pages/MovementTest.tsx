@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useRef, useEffect, useState } from 'react';
 import TestLayout from '@/components/TestLayout';
+import { useTest } from '@/context/TestContext';
 
 // Movement speed in pixels per second
 const MOVEMENT_SPEED = 220;
@@ -13,6 +14,7 @@ const TEST_DURATION = 30; // seconds
 
 export default function MovementTest() {
   const navigate = useNavigate();
+  const { setDexScore } = useTest(); // ⭐ ADDED: Import setDexScore
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -500,20 +502,32 @@ export default function MovementTest() {
 
   // ---- END TEST ----
   const endTest = () => {
+    // 1. Stop the game
     state.isRunning = false;
     state.testCompleted = true;
+    
+    // 2. Clear timer
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = undefined;
     }
-    state.score = Math.round(state.timeOnTarget * 2);
+    
+    // 3. Calculate final score
+    const finalScore = Math.round(state.timeOnTarget * 2);
+    state.score = finalScore;
+    
+    // 4. ⭐ CRITICAL: Save score to Context
+    setDexScore(finalScore);
+    
+    // 5. Update UI
     setUiState(prev => ({
       ...prev,
       isRunning: false,
       testCompleted: true,
-      score: state.score,
+      score: finalScore,
     }));
-    console.log(`🏁 Test complete! Score: ${state.score}`);
+    
+    console.log(`🏁 MovementTest complete! Score: ${finalScore}`);
   };
 
   // ---- RESIZE ----

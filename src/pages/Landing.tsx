@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crosshair, Move, Zap } from 'lucide-react';
+import { Crosshair, Move, Zap, LayoutDashboard, CreditCard } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useTest } from '@/context/TestContext';
@@ -99,6 +99,26 @@ export default function Landing() {
             Start the gauntlet
           </button>
 
+          {/* Navigation links */}
+          <div className="mt-6 flex items-center justify-center gap-6">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors duration-200"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/flex-card')}
+              className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors duration-200"
+            >
+              <CreditCard className="h-4 w-4" />
+              Flex Card
+            </button>
+          </div>
+
           {/* Test cards */}
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
             {tests.map((test) => {
@@ -129,7 +149,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border py-5 text-center">
         <p className="text-xs sm:text-sm text-text-secondary tracking-wide">
-          3 tests. 90 seconds. Know your rank.
+          3 tests. 90 seconds. Know where you stand.
         </p>
       </footer>
     </Layout>

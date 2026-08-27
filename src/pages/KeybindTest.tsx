@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useRef, useEffect, useState } from 'react';
 import TestLayout from '@/components/TestLayout';
+import { useTest } from '@/context/TestContext';
 
 // Key pool: 8 common keys + 3 rare keys
 const COMMON_KEYS = ['Q', 'E', 'R', 'F', 'G', 'C', 'V', 'X'];
@@ -34,6 +35,7 @@ type FeedbackType = 'idle' | 'correct' | 'wrong' | 'avoided' | 'penalty' | 'boss
 
 export default function KeybindTest() {
   const navigate = useNavigate();
+  const { setReaxScore } = useTest();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -476,6 +478,10 @@ export default function KeybindTest() {
 
   // --- END TEST ---
   const endTest = () => {
+    // 1. Freeze the final score
+    const finalScore = scoreRef.current;
+    
+    // 2. Stop the game
     isRunningRef.current = false;
     setIsRunning(false);
     setTestCompleted(true);
@@ -483,6 +489,7 @@ export default function KeybindTest() {
     setFeedback('idle');
     setFeedbackText('');
 
+    // 3. Clear all intervals
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = undefined;
@@ -496,8 +503,12 @@ export default function KeybindTest() {
       surgeIntervalRef.current = undefined;
     }
 
-    console.log(`🏁 KeybindTest complete! Score: ${scoreRef.current}`);
-    console.log(`   Hits: ${hitsRef.current}, Misses: ${missesRef.current}, Max Combo: ${maxCombo}x`);
+    // 4. ⭐ CRITICAL: Save score to Context
+    setReaxScore(finalScore);
+
+    // 5. Log the results
+    console.log(`🏁 KeybindTest complete! Score: ${finalScore}`);
+    console.log(`   Hits: ${hitsRef.current}, Misses: ${missesRef.current}, Max Combo: ${maxCombo}`);
     console.log(`   Boss Keys: ${bossCounterRef.current}, Speed Surge Level: ${surgeLevelRef.current}%`);
   };
 
