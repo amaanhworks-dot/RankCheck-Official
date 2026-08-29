@@ -3,6 +3,7 @@ import { Crosshair, Move, Zap, RotateCcw, Chrome as Home, Trophy, Download, Layo
 import Layout from '@/components/Layout';
 import { useTest } from '@/context/TestContext';
 import { useEffect, useState } from 'react';
+import { fetchUserPercentiles, formatPercentile, UserPercentiles } from '@/lib/supabase';
 
 type TestResult = {
   icon: typeof Crosshair;
@@ -10,6 +11,7 @@ type TestResult = {
   score: number;
   unit: string;
   key: 'aim' | 'movement' | 'reflex';
+  percentile?: number;
 };
 
 type Rank = {
@@ -38,23 +40,32 @@ function getRank(score: number): Rank {
 
 export default function Results() {
   const navigate = useNavigate();
-  const { gamertag, aimScore, dexScore, reaxScore, compositeScore } = useTest();
+  const { gamertag, aimScore, dexScore, reaxScore, compositeScore, anonId } = useTest();
   const [isLoading, setIsLoading] = useState(true);
+  const [percentiles, setPercentiles] = useState<UserPercentiles | null>(null);
 
-  // Check if all scores are present
   useEffect(() => {
-    // Allow a moment for the save to complete
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+    const loadPercentiles = async () => {
+      if (!anonId) {
+        setIsLoading(false);
+        return;
+      }
 
-    return () => clearTimeout(timer);
-  }, []);
+      try {
+        const result = await fetchUserPercentiles(anonId);
+        setPercentiles(result);
+      } catch (err) {
+        console.error('Failed to fetch percentiles:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Check if we have all scores
+    loadPercentiles();
+  }, [anonId]);
+
   const hasAllScores = aimScore !== null && dexScore !== null && reaxScore !== null && compositeScore !== null;
 
-  // If no scores, show a message
   if (!hasAllScores && !isLoading) {
     return (
       <Layout>
@@ -79,30 +90,49 @@ export default function Results() {
     );
   }
 
-  // Build results array from real data
   const results: TestResult[] = [
-    { icon: Crosshair, label: 'Aim', score: aimScore ?? 0, unit: 'pts', key: 'aim' },
-    { icon: Move, label: 'Movement', score: dexScore ?? 0, unit: 'pts', key: 'movement' },
-    { icon: Zap, label: 'Reflex', score: reaxScore ?? 0, unit: 'pts', key: 'reflex' },
+    { 
+      icon: Crosshair, 
+      label: 'Aim', 
+      score: aimScore ?? 0, 
+      unit: 'pts', 
+      key: 'aim',
+      percentile: percentiles?.aimPercentile,
+    },
+    { 
+      icon: Move, 
+      label: 'Movement', 
+      score: dexScore ?? 0, 
+      unit: 'pts', 
+      key: 'movement',
+      percentile: percentiles?.movementPercentile,
+    },
+    { 
+      icon: Zap, 
+      label: 'Reflex', 
+      score: reaxScore ?? 0, 
+      unit: 'pts', 
+      key: 'reflex',
+      percentile: percentiles?.reflexPercentile,
+    },
   ];
 
   const total = compositeScore ?? 0;
   const rank = getRank(total);
+  const compositePercentile = percentiles?.compositePercentile;
 
   return (
     <Layout>
       <div className="relative flex-1 flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
-        {/* Loading overlay */}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-20">
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-text-secondary text-sm">Saving your scores...</p>
+              <p className="text-text-secondary text-sm">Loading your results...</p>
             </div>
           </div>
         )}
 
-        {/* Rank glow */}
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none transition-all duration-500"
           style={{
@@ -111,12 +141,10 @@ export default function Results() {
         />
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full animate-fade-in-up">
-          {/* Header */}
           <p className="text-sm sm:text-base text-text-secondary tracking-wide">
             {gamertag ? `${gamertag}'s result` : 'Your result'}
           </p>
 
-          {/* Rank badge */}
           <div className="mt-6 flex flex-col items-center">
             <div
               className="flex h-24 w-24 items-center justify-center rounded-full border-2 transition-all duration-500"
@@ -143,12 +171,17 @@ export default function Results() {
             <p className="mt-2 font-heading text-xl text-text-secondary tracking-widest">
               {total} <span className="text-sm">composite score</span>
             </p>
+            {compositePercentile !== undefined && (
+              <p className="mt-1 text-sm font-bold text-primary-glow">
+                {formatPercentile(compositePercentile)}
+              </p>
+            )}
           </div>
 
-          {/* Score breakdown */}
           <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
             {results.map((r) => {
               const Icon = r.icon;
+              const percentileLabel = r.percentile !== undefined ? formatPercentile(r.percentile) : null;
               return (
                 <div
                   key={r.label}
@@ -166,12 +199,16 @@ export default function Results() {
                     {r.score}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">{r.unit}</p>
+                  {percentileLabel && (
+                    <p className="mt-1 text-xs font-medium text-primary-glow">
+                      {percentileLabel}
+                    </p>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* Actions */}
           <div className="mt-10 flex flex-col sm:flex-row gap-3 w-full max-w-2xl flex-wrap justify-center">
             <button
               type="button"

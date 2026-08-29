@@ -2,18 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { Crosshair, Move, Zap, RotateCcw, Trophy, Loader2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useTest } from '@/context/TestContext';
-import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
-
-type ScoreEntry = {
-  id: string;
-  aim_score: number;
-  dex_score: number;
-  reax_score: number;
-  composite_score: number;
-  created_at: string;
-  gamer_tag: string;
-};
+import { formatPercentile, fetchUserScoresWithPercentiles, ScoreWithPercentiles } from '@/lib/supabase';
 
 type BestScores = {
   bestAim: number;
@@ -56,7 +46,7 @@ function formatDate(dateString: string): string {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { gamertag, anonId } = useTest();
-  const [history, setHistory] = useState<ScoreEntry[]>([]);
+  const [history, setHistory] = useState<ScoreWithPercentiles[]>([]);
   const [bestScores, setBestScores] = useState<BestScores>({
     bestAim: 0,
     bestMovement: 0,
@@ -66,9 +56,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch data from Supabase
   useEffect(() => {
-    const fetchHistory = async () => {
+    const fetchData = async () => {
       if (!anonId) {
         setIsLoading(false);
         return;
@@ -78,27 +67,15 @@ export default function Dashboard() {
         setIsLoading(true);
         setError(null);
 
-        const { data, error: supabaseError } = await supabase
-          .from('user_scores')
-          .select('*')
-          .eq('user_id', anonId)
-          .order('created_at', { ascending: false });
+        const scoresWithPercentiles = await fetchUserScoresWithPercentiles(anonId);
 
-        if (supabaseError) {
-          console.error('Supabase fetch error:', supabaseError);
-          setError('Failed to load history. Please try again.');
-          setIsLoading(false);
-          return;
-        }
+        if (scoresWithPercentiles.length > 0) {
+          setHistory(scoresWithPercentiles);
 
-        if (data && data.length > 0) {
-          setHistory(data);
-
-          // Calculate best scores
-          const bestAim = Math.max(...data.map((row: ScoreEntry) => row.aim_score));
-          const bestMovement = Math.max(...data.map((row: ScoreEntry) => row.dex_score));
-          const bestReflex = Math.max(...data.map((row: ScoreEntry) => row.reax_score));
-          const bestComposite = Math.max(...data.map((row: ScoreEntry) => row.composite_score));
+          const bestAim = Math.max(...scoresWithPercentiles.map((row: ScoreWithPercentiles) => row.aim_score));
+          const bestMovement = Math.max(...scoresWithPercentiles.map((row: ScoreWithPercentiles) => row.dex_score));
+          const bestReflex = Math.max(...scoresWithPercentiles.map((row: ScoreWithPercentiles) => row.reax_score));
+          const bestComposite = Math.max(...scoresWithPercentiles.map((row: ScoreWithPercentiles) => row.composite_score));
 
           setBestScores({
             bestAim,
@@ -108,25 +85,18 @@ export default function Dashboard() {
           });
         } else {
           setHistory([]);
-          setBestScores({
-            bestAim: 0,
-            bestMovement: 0,
-            bestReflex: 0,
-            bestComposite: 0,
-          });
         }
       } catch (err) {
-        console.error('Unexpected error:', err);
-        setError('Something went wrong. Please refresh and try again.');
+        console.error('Error fetching data:', err);
+        setError('Failed to load history. Please refresh and try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchHistory();
+    fetchData();
   }, [anonId]);
 
-  // Loading state
   if (isLoading) {
     return (
       <Layout>
@@ -138,7 +108,6 @@ export default function Dashboard() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Layout>
@@ -158,7 +127,6 @@ export default function Dashboard() {
     );
   }
 
-  // Empty state (no attempts yet)
   if (history.length === 0) {
     return (
       <Layout>
@@ -184,13 +152,11 @@ export default function Dashboard() {
     );
   }
 
-  // Get current rank from best composite
   const currentRank = getRank(bestScores.bestComposite);
 
   return (
     <Layout>
       <div className="flex-1 flex flex-col px-4 sm:px-6 py-8 max-w-4xl w-full mx-auto animate-fade-in">
-        {/* Header row */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-wide text-white">
@@ -201,7 +167,6 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Rank badge */}
             <div
               className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold"
               style={{
@@ -226,7 +191,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Best scores summary cards */}
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
             <p className="text-xs text-text-secondary uppercase tracking-wider">Best Aim</p>
@@ -246,52 +210,83 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* History section */}
         <div className="mt-10">
           <h2 className="font-heading text-lg font-semibold text-white tracking-wide">
             Attempt history
           </h2>
 
-          <div className="mt-4 rounded-2xl border border-border overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-6 gap-2 bg-surface/50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              <span>Date</span>
-              <span className="text-center">Aim</span>
-              <span className="text-center">Movement</span>
-              <span className="text-center">Reflex</span>
-              <span className="text-center">Composite</span>
-              <span className="text-right">Rank</span>
-            </div>
+          <div className="mt-4 rounded-2xl border border-border overflow-x-auto">
+            <div className="min-w-[700px]">
+              <div className="grid grid-cols-6 gap-2 bg-surface/50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <span>Date</span>
+                <span className="text-center">Aim</span>
+                <span className="text-center">Movement</span>
+                <span className="text-center">Reflex</span>
+                <span className="text-center">Composite</span>
+                <span className="text-right">Rank</span>
+              </div>
 
-            {/* History rows */}
-            {history.map((entry, i) => {
-              const rank = getRank(entry.composite_score);
-              return (
-                <div
-                  key={entry.id}
-                  className="grid grid-cols-6 gap-2 px-4 py-3.5 text-sm transition-colors duration-150 hover:bg-primary/5"
-                  style={{
-                    backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent',
-                  }}
-                >
-                  <span className="text-text-secondary">{formatDate(entry.created_at)}</span>
-                  <span className="text-center font-heading font-semibold text-white">{entry.aim_score}</span>
-                  <span className="text-center font-heading font-semibold text-white">{entry.dex_score}</span>
-                  <span className="text-center font-heading font-semibold text-white">{entry.reax_score}</span>
-                  <span className="text-center font-heading font-bold text-primary-glow">{entry.composite_score}</span>
-                  <span
-                    className="text-right font-heading font-bold"
-                    style={{ color: rank.color }}
+              {history.map((entry: ScoreWithPercentiles, i: number) => {
+                const rank = getRank(entry.composite_score);
+                return (
+                  <div
+                    key={entry.id}
+                    className="grid grid-cols-6 gap-2 px-4 py-3.5 text-sm transition-colors duration-150 hover:bg-primary/5"
+                    style={{
+                      backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                    }}
                   >
-                    {rank.label}
-                  </span>
-                </div>
-              );
-            })}
+                    <span className="text-text-secondary">{formatDate(entry.created_at)}</span>
+                    
+                    <div className="text-center">
+                      <span className="font-heading font-semibold text-white">{entry.aim_score}</span>
+                      {entry.aim_percentile !== undefined && (
+                        <p className="text-[10px] text-primary-glow/70">
+                          {formatPercentile(entry.aim_percentile)}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="text-center">
+                      <span className="font-heading font-semibold text-white">{entry.dex_score}</span>
+                      {entry.movement_percentile !== undefined && (
+                        <p className="text-[10px] text-primary-glow/70">
+                          {formatPercentile(entry.movement_percentile)}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="text-center">
+                      <span className="font-heading font-semibold text-white">{entry.reax_score}</span>
+                      {entry.reflex_percentile !== undefined && (
+                        <p className="text-[10px] text-primary-glow/70">
+                          {formatPercentile(entry.reflex_percentile)}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="text-center">
+                      <span className="font-heading font-bold text-primary-glow">{entry.composite_score}</span>
+                      {entry.composite_percentile !== undefined && (
+                        <p className="text-[10px] font-bold text-primary-glow">
+                          {formatPercentile(entry.composite_percentile)}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <span
+                      className="text-right font-heading font-bold"
+                      style={{ color: rank.color }}
+                    >
+                      {rank.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Footer actions */}
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-end">
           <button
             type="button"
