@@ -7,6 +7,7 @@ import KeybindTest from '@/pages/KeybindTest';
 import Results from '@/pages/Results';
 import Dashboard from '@/pages/Dashboard';
 import FlexCardPage from '@/pages/FlexCardPage';
+import Leaderboard from '@/pages/leaderboard';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/results" element={<Results />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/flex-card" element={<FlexCardPage />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>
       </BrowserRouter>
     </TestProvider>

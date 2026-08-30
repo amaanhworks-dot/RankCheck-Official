@@ -9,7 +9,7 @@ import {
   useRef,
 } from 'react';
 import { supabase } from '@/lib/supabase';
-import { getOrCreateAnonId } from '@/lib/anonId';
+import { getOrCreateAnonId, getGamertag, saveGamertag } from '@/lib/anonId';
 
 type TestContextValue = {
   gamertag: string;
@@ -26,8 +26,30 @@ type TestContextValue = {
 
 const TestContext = createContext<TestContextValue | undefined>(undefined);
 
+// ⭐ Updated Rank Thresholds (0-100 scale)
+export const RANKS = [
+  { label: 'Radiant', color: '#fbbf24', minScore: 85 },
+  { label: 'Immortal', color: '#c084fc', minScore: 70 },
+  { label: 'Diamond', color: '#60a5fa', minScore: 55 },
+  { label: 'Platinum', color: '#34d399', minScore: 40 },
+  { label: 'Gold', color: '#f59e0b', minScore: 25 },
+  { label: 'Bronze', color: '#d97706', minScore: 0 },
+];
+
+export function getRank(score: number): { label: string; color: string; minScore: number } {
+  for (const rank of RANKS) {
+    if (score >= rank.minScore) return rank;
+  }
+  return RANKS[RANKS.length - 1];
+}
+
 export function TestProvider({ children }: { children: ReactNode }) {
-  const [gamertag, setGamertag] = useState('');
+  // Initialize gamertag from localStorage
+  const [gamertag, setGamertag] = useState(() => {
+    const saved = getGamertag();
+    return saved || '';
+  });
+  
   const [aimScore, setAimScore] = useState<number | null>(null);
   const [dexScore, setDexScore] = useState<number | null>(null);
   const [reaxScore, setReaxScore] = useState<number | null>(null);
@@ -36,26 +58,43 @@ export function TestProvider({ children }: { children: ReactNode }) {
 
   const hasSaved = useRef(false);
 
-  // --- CALCULATE COMPOSITE SCORE ---
-  // Runs whenever any individual score changes
+  // Save gamertag to localStorage whenever it changes
+  useEffect(() => {
+    if (gamertag.trim()) {
+      saveGamertag(gamertag.trim());
+    }
+  }, [gamertag]);
+
+  // ⭐ Calculate composite score (normalized 0-100 scale)
   useEffect(() => {
     if (aimScore !== null && dexScore !== null && reaxScore !== null) {
-      // Formula: (aim × 0.4) + (movement × 0.35) + (reflex × 0.25)
+      // Normalize each score to 0-100 scale
+      const normalizeAim = (score: number) => Math.min((score / 1000) * 100, 100);
+      const normalizeMovement = (score: number) => Math.min((score / 60) * 100, 100);
+      const normalizeReflex = (score: number) => Math.min((score / 1000) * 100, 100);
+
+      const aimNorm = normalizeAim(aimScore);
+      const moveNorm = normalizeMovement(dexScore);
+      const reflexNorm = normalizeReflex(reaxScore);
+
+      // Apply weights: Aim 40%, Movement 35%, Reflex 25%
       const composite = Math.round(
-        (aimScore * 0.4) + (dexScore * 0.35) + (reaxScore * 0.25)
+        (aimNorm * 0.4) + (moveNorm * 0.35) + (reflexNorm * 0.25)
       );
+
       setCompositeScore(composite);
-      console.log(`📊 Composite score calculated: ${composite}`);
-      console.log(`   (${aimScore} × 0.4) + (${dexScore} × 0.35) + (${reaxScore} × 0.25) = ${composite}`);
+      console.log(`📊 Composite calculated: ${composite}`);
+      console.log(`   Aim: ${aimScore} → ${aimNorm.toFixed(1)}/100`);
+      console.log(`   Movement: ${dexScore} → ${moveNorm.toFixed(1)}/100`);
+      console.log(`   Reflex: ${reaxScore} → ${reflexNorm.toFixed(1)}/100`);
     } else {
-      // Reset composite if any score is null
       if (compositeScore !== null) {
         setCompositeScore(null);
       }
     }
   }, [aimScore, dexScore, reaxScore]);
 
-  // Debug: Log whenever scores change
+  // Debug logging
   useEffect(() => {
     console.log('🔍 TestContext State Update:', {
       gamertag: gamertag || '(empty)',
@@ -66,7 +105,7 @@ export function TestProvider({ children }: { children: ReactNode }) {
     });
   }, [gamertag, aimScore, dexScore, reaxScore, compositeScore]);
 
-  // Auto-save when all three scores are present
+  // Auto-save
   useEffect(() => {
     console.log('🔄 Auto-save check triggered');
     console.log(`   aimScore: ${aimScore} (${aimScore === null ? 'null' : 'set'})`);
@@ -76,25 +115,21 @@ export function TestProvider({ children }: { children: ReactNode }) {
     console.log(`   gamertag: "${gamertag}" (${gamertag.trim() ? 'valid' : 'EMPTY'})`);
     console.log(`   hasSaved: ${hasSaved.current}`);
 
-    // Condition 1: All scores non-null (including composite)
     if (aimScore === null || dexScore === null || reaxScore === null || compositeScore === null) {
       console.log('❌ Auto-save blocked: One or more scores are null');
       return;
     }
 
-    // Condition 2: Gamertag not empty
     if (!gamertag.trim()) {
       console.log('❌ Auto-save blocked: Gamertag is empty');
       return;
     }
 
-    // Condition 3: Not already saved
     if (hasSaved.current) {
       console.log('❌ Auto-save blocked: Already saved');
       return;
     }
 
-    // All conditions met!
     console.log('✅ ALL CONDITIONS MET! Proceeding with save...');
     hasSaved.current = true;
 

@@ -686,9 +686,12 @@ export default function AimTest() {
     }
   };
 
-  // --- CAPTURE FINAL STATS ---
   const captureFinalStats = () => {
-    const finalScore = Math.round(scoreRef.current * 1.2);
+    const rawScore = scoreRef.current;
+    const finalScore = Math.round(rawScore * 1.2);
+    // ⭐ Normalize the final score for display
+    const normalizedScore = Math.min(Math.round((finalScore / 1000) * 100), 100);
+
     const finalHits = hitsRef.current;
     const finalShots = shotsRef.current;
     const finalMisses = Math.max(0, finalShots - finalHits);
@@ -698,7 +701,7 @@ export default function AimTest() {
 
     // Update ref synchronously
     finalStatsRef.current = {
-      score: finalScore,
+      score: normalizedScore, // ⭐ Store normalized score
       hits: finalHits,
       misses: finalMisses,
       accuracy: finalAccuracy,
@@ -709,10 +712,12 @@ export default function AimTest() {
     // Update state for React re-render
     setFinalStats({ ...finalStatsRef.current });
 
+    // ⭐ Save the RAW score to Context (not normalized)
+    // The composite will normalize it again
     scoreRef.current = finalScore;
     setAimScore(finalScore);
 
-    console.log(`🏁 AimTest complete! Score: ${finalScore}`);
+    console.log(`🏁 AimTest complete! Raw Score: ${finalScore}, Normalized: ${normalizedScore}`);
     console.log(`   Hits: ${finalHits}, Shots: ${finalShots}, Misses: ${finalMisses}`);
     console.log(`   Accuracy: ${finalAccuracy}%, Max Combo: ${finalMaxCombo}x`);
     console.log(`   Ace Targets: ${finalAceCount}/6`);
@@ -1115,11 +1120,10 @@ export default function AimTest() {
             type="button"
             onClick={startTest}
             disabled={isRunning}
-            className={`rounded-xl px-6 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
-              isRunning
+            className={`rounded-xl px-6 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${isRunning
                 ? 'border border-border text-text-secondary cursor-not-allowed opacity-50'
                 : 'border border-primary text-primary hover:bg-primary/10 hover:shadow-primary-glow'
-            }`}
+              }`}
           >
             {isRunning ? 'Running...' : 'Start Test'}
           </button>

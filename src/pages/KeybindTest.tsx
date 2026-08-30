@@ -478,8 +478,10 @@ export default function KeybindTest() {
 
   // --- END TEST ---
   const endTest = () => {
-    // 1. Freeze the final score
-    const finalScore = scoreRef.current;
+    // 1. Freeze the final raw score
+    const rawScore = scoreRef.current;
+    // Normalize the score for display
+    const normalizedScore = Math.min(Math.round((rawScore / 1000) * 100), 100);
     
     // 2. Stop the game
     isRunningRef.current = false;
@@ -503,11 +505,14 @@ export default function KeybindTest() {
       surgeIntervalRef.current = undefined;
     }
 
-    // 4. ⭐ CRITICAL: Save score to Context
-    setReaxScore(finalScore);
+    // 4. Save RAW score to Context (not normalized)
+    setReaxScore(rawScore);
 
-    // 5. Log the results
-    console.log(`🏁 KeybindTest complete! Score: ${finalScore}`);
+    // 5. Update the display score to show normalized value
+    setScore(normalizedScore);
+
+    // 6. Log the results
+    console.log(`🏁 KeybindTest complete! Raw Score: ${rawScore}, Normalized: ${normalizedScore}`);
     console.log(`   Hits: ${hitsRef.current}, Misses: ${missesRef.current}, Max Combo: ${maxCombo}`);
     console.log(`   Boss Keys: ${bossCounterRef.current}, Speed Surge Level: ${surgeLevelRef.current}%`);
   };
@@ -880,7 +885,10 @@ export default function KeybindTest() {
   }, [canvasSize, score, combo, timeLeft, currentPrompt, isRunning, testCompleted, pressedKeys, feedback, feedbackText, isBossKey, isSurgeActive, surgeLevel]);
 
   return (
-    <TestLayout step={3} onContinue={() => navigate('/results')}>
+    <TestLayout step={3} onContinue={() => {
+      // ⭐ Navigate to Results with a flag to refresh leaderboard cache
+      navigate('/results', { state: { refreshLeaderboard: true } });
+    }}>
       <div className="flex w-full max-w-4xl flex-col items-center">
         <p className="mb-4 text-center text-sm text-text-secondary sm:text-base">
           Press the key that appears. React fast!

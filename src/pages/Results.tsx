@@ -5,6 +5,11 @@ import { useTest } from '@/context/TestContext';
 import { useEffect, useState } from 'react';
 import { fetchUserPercentiles, formatPercentile, UserPercentiles } from '@/lib/supabase';
 
+// ⭐ Normalize functions
+const normalizeAim = (score: number) => Math.min(Math.round((score / 1000) * 100), 100);
+const normalizeMovement = (score: number) => Math.min(Math.round((score / 60) * 100), 100);
+const normalizeReflex = (score: number) => Math.min(Math.round((score / 1000) * 100), 100);
+
 type TestResult = {
   icon: typeof Crosshair;
   label: string;
@@ -23,11 +28,11 @@ type Rank = {
 };
 
 const RANKS: Rank[] = [
-  { label: 'Radiant', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: 'rgba(251, 191, 36, 0.15)', minScore: 270 },
-  { label: 'Immortal', color: '#c084fc', glow: 'rgba(192, 132, 252, 0.6)', bg: 'rgba(192, 132, 252, 0.15)', minScore: 220 },
-  { label: 'Diamond', color: '#60a5fa', glow: 'rgba(96, 165, 250, 0.6)', bg: 'rgba(96, 165, 250, 0.15)', minScore: 170 },
-  { label: 'Platinum', color: '#34d399', glow: 'rgba(52, 211, 153, 0.6)', bg: 'rgba(52, 211, 153, 0.15)', minScore: 120 },
-  { label: 'Gold', color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.6)', bg: 'rgba(245, 158, 11, 0.15)', minScore: 70 },
+  { label: 'Radiant', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)', bg: 'rgba(251, 191, 36, 0.15)', minScore: 85 },
+  { label: 'Immortal', color: '#c084fc', glow: 'rgba(192, 132, 252, 0.6)', bg: 'rgba(192, 132, 252, 0.15)', minScore: 70 },
+  { label: 'Diamond', color: '#60a5fa', glow: 'rgba(96, 165, 250, 0.6)', bg: 'rgba(96, 165, 250, 0.15)', minScore: 55 },
+  { label: 'Platinum', color: '#34d399', glow: 'rgba(52, 211, 153, 0.6)', bg: 'rgba(52, 211, 153, 0.15)', minScore: 40 },
+  { label: 'Gold', color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.6)', bg: 'rgba(245, 158, 11, 0.15)', minScore: 25 },
   { label: 'Bronze', color: '#d97706', glow: 'rgba(217, 119, 6, 0.6)', bg: 'rgba(217, 119, 6, 0.15)', minScore: 0 },
 ];
 
@@ -90,11 +95,16 @@ export default function Results() {
     );
   }
 
+  // ⭐ Normalize scores for display
+  const displayAim = normalizeAim(aimScore ?? 0);
+  const displayMovement = normalizeMovement(dexScore ?? 0);
+  const displayReflex = normalizeReflex(reaxScore ?? 0);
+
   const results: TestResult[] = [
     { 
       icon: Crosshair, 
       label: 'Aim', 
-      score: aimScore ?? 0, 
+      score: displayAim, 
       unit: 'pts', 
       key: 'aim',
       percentile: percentiles?.aimPercentile,
@@ -102,7 +112,7 @@ export default function Results() {
     { 
       icon: Move, 
       label: 'Movement', 
-      score: dexScore ?? 0, 
+      score: displayMovement, 
       unit: 'pts', 
       key: 'movement',
       percentile: percentiles?.movementPercentile,
@@ -110,7 +120,7 @@ export default function Results() {
     { 
       icon: Zap, 
       label: 'Reflex', 
-      score: reaxScore ?? 0, 
+      score: displayReflex, 
       unit: 'pts', 
       key: 'reflex',
       percentile: percentiles?.reflexPercentile,

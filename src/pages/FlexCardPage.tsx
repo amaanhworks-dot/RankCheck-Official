@@ -6,28 +6,8 @@ import Layout from '@/components/Layout';
 import FlexCard from '@/components/FlexCard';
 import { useTest } from '@/context/TestContext';
 import { fetchUserPercentiles, UserPercentiles, formatPercentile, fetchPreviousBestScore } from '@/lib/supabase';
-
-type Rank = {
-  label: string;
-  color: string;
-  minScore: number;
-};
-
-const RANKS: Rank[] = [
-  { label: 'Radiant', color: '#fbbf24', minScore: 270 },
-  { label: 'Immortal', color: '#c084fc', minScore: 220 },
-  { label: 'Diamond', color: '#60a5fa', minScore: 170 },
-  { label: 'Platinum', color: '#34d399', minScore: 120 },
-  { label: 'Gold', color: '#f59e0b', minScore: 70 },
-  { label: 'Bronze', color: '#d97706', minScore: 0 },
-];
-
-function getRank(score: number): Rank {
-  for (const rank of RANKS) {
-    if (score >= rank.minScore) return rank;
-  }
-  return RANKS[RANKS.length - 1];
-}
+// ⭐ Import ranks from TestContext
+import { RANKS, getRank } from '@/context/TestContext';
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
@@ -82,6 +62,7 @@ export default function FlexCardPage() {
   }, [anonId, compositeScore]);
 
   const hasAllScores = aimScore !== null && dexScore !== null && reaxScore !== null && compositeScore !== null;
+  // ⭐ Use imported getRank from TestContext
   const rank = getRank(compositeScore ?? 0);
 
   const generateCardImage = async (): Promise<string> => {

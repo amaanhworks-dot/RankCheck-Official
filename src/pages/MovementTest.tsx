@@ -5,6 +5,7 @@ import { useTest } from '@/context/TestContext';
 
 // Movement speed in pixels per second
 const MOVEMENT_SPEED = 220;
+const SPRINT_SPEED = 380;
 
 // Target movement settings
 const TARGET_SPEED = 120;
@@ -14,39 +15,32 @@ const TEST_DURATION = 30; // seconds
 
 export default function MovementTest() {
   const navigate = useNavigate();
-  const { setDexScore } = useTest(); // ⭐ ADDED: Import setDexScore
+  const { setDexScore } = useTest();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // All game state as refs (no React state for game logic)
+  // All game state as refs
   const state = useRef({
-    // Crosshair
     crosshairX: 0,
     crosshairY: 0,
-    // Target
     targetX: 0,
     targetY: 0,
     targetVx: 0,
     targetVy: 0,
-    // Status
     isOnTarget: false,
-    // Tracking
     framesOnTarget: 0,
     totalFrames: 0,
     timeOnTarget: 0,
-    // Timer
     timeLeft: TEST_DURATION,
     isRunning: false,
     testCompleted: false,
-    // Score
     score: 0,
     accuracy: 0,
-    // Direction change tracking
     timeSinceLastDirectionChange: 0,
     frameCounter: 0,
   }).current;
 
-  // UI state (only for rendering buttons)
+  // UI state
   const [uiState, setUiState] = useState({
     isRunning: false,
     testCompleted: false,
@@ -56,14 +50,13 @@ export default function MovementTest() {
     totalFrames: 0,
   });
 
-  // Key states
-  const keysPressed = useRef({ w: false, a: false, s: false, d: false });
+  // ⭐ Key states including Shift
+  const keysPressed = useRef({ w: false, a: false, s: false, d: false, shift: false });
   
   const animationRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
   const timerIntervalRef = useRef<number>();
 
-  // Random direction
   const randomDirection = () => {
     const angle = Math.random() * Math.PI * 2;
     return {
@@ -72,7 +65,6 @@ export default function MovementTest() {
     };
   };
 
-  // Initialize target
   const initTarget = (canvasWidth: number, canvasHeight: number) => {
     const padding = 50;
     state.targetX = Math.random() * (canvasWidth - padding * 2) + padding;
@@ -82,7 +74,6 @@ export default function MovementTest() {
     state.targetVy = dir.vy;
   };
 
-  // Draw everything
   const draw = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -91,10 +82,8 @@ export default function MovementTest() {
 
     const { width, height } = canvas;
 
-    // Clear
     ctx.clearRect(0, 0, width, height);
 
-    // Background
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, width, height);
 
@@ -153,12 +142,11 @@ export default function MovementTest() {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
 
-    // ---- TARGET ----
+    // TARGET
     const targetRadius = 20;
     const ringRadius = 36;
     const pulseSize = 8 + Math.sin(Date.now() / 300) * 3;
 
-    // Ring glow
     const ringGlowGrad = ctx.createRadialGradient(
       state.targetX, state.targetY, targetRadius,
       state.targetX, state.targetY, ringRadius + 10
@@ -171,7 +159,6 @@ export default function MovementTest() {
     ctx.arc(state.targetX, state.targetY, ringRadius + 10, 0, Math.PI * 2);
     ctx.fill();
 
-    // Outer ring (dashed)
     ctx.shadowBlur = 0;
     ctx.strokeStyle = state.isOnTarget
       ? 'rgba(68, 255, 136, 0.3)'
@@ -183,7 +170,6 @@ export default function MovementTest() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Target body glow
     const glowGrad = ctx.createRadialGradient(
       state.targetX, state.targetY, 0,
       state.targetX, state.targetY, targetRadius + pulseSize + 20
@@ -196,7 +182,6 @@ export default function MovementTest() {
     ctx.arc(state.targetX, state.targetY, targetRadius + pulseSize + 20, 0, Math.PI * 2);
     ctx.fill();
 
-    // Target body
     const targetGrad = ctx.createRadialGradient(
       state.targetX - 6, state.targetY - 6, 0,
       state.targetX, state.targetY, targetRadius
@@ -211,7 +196,6 @@ export default function MovementTest() {
     ctx.fillStyle = targetGrad;
     ctx.fill();
 
-    // Inner highlight
     ctx.shadowBlur = 0;
     const highlightGrad = ctx.createRadialGradient(
       state.targetX - 8, state.targetY - 8, 0,
@@ -230,7 +214,7 @@ export default function MovementTest() {
     ctx.arc(state.targetX, state.targetY, targetRadius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // ---- PLAYER CROSSHAIR ----
+    // PLAYER CROSSHAIR
     const pX = state.crosshairX;
     const pY = state.crosshairY;
     const radius = 12;
@@ -275,7 +259,7 @@ export default function MovementTest() {
 
     ctx.shadowBlur = 0;
 
-    // ---- HUD: TIMER ----
+    // HUD: TIMER
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const timerText = `${String(Math.floor(state.timeLeft / 60)).padStart(2, '0')}:${String(state.timeLeft % 60).padStart(2, '0')}`;
@@ -304,7 +288,7 @@ export default function MovementTest() {
     ctx.textBaseline = 'top';
     ctx.fillText(timerText, width / 2, timerPillY + 10);
 
-    // ---- HUD: SCORE ----
+    // HUD: SCORE
     ctx.shadowBlur = 0;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -318,7 +302,20 @@ export default function MovementTest() {
     ctx.shadowBlur = 15;
     ctx.fillText(`${state.score}`, 25, 40);
 
-    // ---- TEST COMPLETE OVERLAY ----
+    // ⭐ SPRINT INDICATOR
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    const isSprinting = keysPressed.current.shift;
+    ctx.fillStyle = isSprinting ? 'rgba(68, 255, 136, 0.8)' : 'rgba(255, 255, 255, 0.25)';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(
+      isSprinting ? '🏃 SPRINT' : 'WALK',
+      width - 12,
+      height - 12
+    );
+
+    // TEST COMPLETE OVERLAY
     if (state.testCompleted) {
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -335,7 +332,7 @@ export default function MovementTest() {
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.font = '24px Orbitron, sans-serif';
-      ctx.fillText(`Score: ${state.score} / 60`, width / 2, height / 2 + 40);
+      ctx.fillText(`Score: ${Math.min(Math.round((state.score / 60) * 100), 100)} / 100`, width / 2, height / 2 + 40);
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.font = '16px Orbitron, sans-serif';
@@ -355,7 +352,6 @@ export default function MovementTest() {
     );
   };
 
-  // Update game logic
   const update = (deltaTime: number) => {
     if (!state.isRunning) return;
 
@@ -375,7 +371,9 @@ export default function MovementTest() {
         dx *= 0.7071;
         dy *= 0.7071;
       }
-      const speed = MOVEMENT_SPEED * deltaTime;
+      // ⭐ Sprint: Shift key increases speed
+      const baseSpeed = keysPressed.current.shift ? SPRINT_SPEED : MOVEMENT_SPEED;
+      const speed = baseSpeed * deltaTime;
       let newX = state.crosshairX + dx * speed;
       let newY = state.crosshairY + dy * speed;
       const padding = 20;
@@ -453,7 +451,6 @@ export default function MovementTest() {
     });
   };
 
-  // ---- START TEST ----
   const startTest = () => {
     if (state.isRunning) return;
 
@@ -463,7 +460,6 @@ export default function MovementTest() {
       return;
     }
 
-    // Reset state
     state.isRunning = true;
     state.testCompleted = false;
     state.timeLeft = TEST_DURATION;
@@ -479,7 +475,6 @@ export default function MovementTest() {
     state.timeSinceLastDirectionChange = 0;
     state.frameCounter = 0;
 
-    // Update UI
     setUiState({
       isRunning: true,
       testCompleted: false,
@@ -489,7 +484,6 @@ export default function MovementTest() {
       totalFrames: 0,
     });
 
-    // Start timer
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     timerIntervalRef.current = window.setInterval(() => {
       state.timeLeft--;
@@ -500,37 +494,30 @@ export default function MovementTest() {
     }, 1000);
   };
 
-  // ---- END TEST ----
   const endTest = () => {
-    // 1. Stop the game
     state.isRunning = false;
     state.testCompleted = true;
     
-    // 2. Clear timer
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = undefined;
     }
     
-    // 3. Calculate final score
-    const finalScore = Math.round(state.timeOnTarget * 2);
-    state.score = finalScore;
+    const rawScore = Math.round(state.timeOnTarget * 2);
+    state.score = rawScore;
     
-    // 4. ⭐ CRITICAL: Save score to Context
-    setDexScore(finalScore);
+    setDexScore(rawScore);
     
-    // 5. Update UI
     setUiState(prev => ({
       ...prev,
       isRunning: false,
       testCompleted: true,
-      score: finalScore,
+      score: rawScore,
     }));
     
-    console.log(`🏁 MovementTest complete! Score: ${finalScore}`);
+    console.log(`🏁 MovementTest complete! Score: ${rawScore}`);
   };
 
-  // ---- RESIZE ----
   const resizeCanvas = () => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -552,7 +539,6 @@ export default function MovementTest() {
     console.log('✅ MovementTest canvas ready:', { width, height });
   };
 
-  // ---- ANIMATION LOOP ----
   const animate = (timestamp: number) => {
     if (!lastTimeRef.current) {
       lastTimeRef.current = timestamp;
@@ -566,12 +552,16 @@ export default function MovementTest() {
     animationRef.current = requestAnimationFrame(animate);
   };
 
-  // ---- KEYBOARD ----
   const handleKeyDown = (e: KeyboardEvent) => {
     const key = e.key.toLowerCase();
     if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
       e.preventDefault();
       keysPressed.current[key as keyof typeof keysPressed.current] = true;
+    }
+    // ⭐ Shift key for sprint
+    if (key === 'shift') {
+      e.preventDefault();
+      keysPressed.current.shift = true;
     }
   };
 
@@ -581,9 +571,13 @@ export default function MovementTest() {
       e.preventDefault();
       keysPressed.current[key as keyof typeof keysPressed.current] = false;
     }
+    // ⭐ Shift key for sprint
+    if (key === 'shift') {
+      e.preventDefault();
+      keysPressed.current.shift = false;
+    }
   };
 
-  // ---- SETUP ----
   useEffect(() => {
     resizeCanvas();
 
@@ -606,7 +600,7 @@ export default function MovementTest() {
     <TestLayout step={2} onContinue={() => navigate('/play/keybind')}>
       <div className="flex w-full max-w-5xl flex-col items-center">
         <p className="mb-4 text-center text-sm text-text-secondary sm:text-base">
-          WASD to track the moving target. Stay on it!
+          WASD to track the moving target. Hold <kbd className="px-2 py-0.5 bg-border rounded text-xs">Shift</kbd> to sprint!
         </p>
 
         <div className="mb-4 flex gap-3">

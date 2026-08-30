@@ -19,11 +19,11 @@ type Rank = {
 };
 
 const RANKS: Rank[] = [
-  { label: 'Radiant', color: '#fbbf24', minScore: 270 },
-  { label: 'Immortal', color: '#c084fc', minScore: 220 },
-  { label: 'Diamond', color: '#60a5fa', minScore: 170 },
-  { label: 'Platinum', color: '#34d399', minScore: 120 },
-  { label: 'Gold', color: '#f59e0b', minScore: 70 },
+  { label: 'Radiant', color: '#fbbf24', minScore: 85 },
+  { label: 'Immortal', color: '#c084fc', minScore: 70 },
+  { label: 'Diamond', color: '#60a5fa', minScore: 55 },
+  { label: 'Platinum', color: '#34d399', minScore: 40 },
+  { label: 'Gold', color: '#f59e0b', minScore: 25 },
   { label: 'Bronze', color: '#d97706', minScore: 0 },
 ];
 
@@ -42,6 +42,11 @@ function formatDate(dateString: string): string {
     year: 'numeric',
   });
 }
+
+// ⭐ Normalize functions
+const normalizeAim = (score: number) => Math.min(Math.round((score / 1000) * 100), 100);
+const normalizeMovement = (score: number) => Math.min(Math.round((score / 60) * 100), 100);
+const normalizeReflex = (score: number) => Math.min(Math.round((score / 1000) * 100), 100);
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -157,6 +162,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="flex-1 flex flex-col px-4 sm:px-6 py-8 max-w-4xl w-full mx-auto animate-fade-in">
+        {/* Header row */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-wide text-white">
@@ -191,18 +197,19 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Best scores summary cards */}
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
             <p className="text-xs text-text-secondary uppercase tracking-wider">Best Aim</p>
-            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestAim}</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{normalizeAim(bestScores.bestAim)}</p>
           </div>
           <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
             <p className="text-xs text-text-secondary uppercase tracking-wider">Best Movement</p>
-            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestMovement}</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{normalizeMovement(bestScores.bestMovement)}</p>
           </div>
           <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
             <p className="text-xs text-text-secondary uppercase tracking-wider">Best Reflex</p>
-            <p className="mt-1 font-heading text-2xl font-bold text-white">{bestScores.bestReflex}</p>
+            <p className="mt-1 font-heading text-2xl font-bold text-white">{normalizeReflex(bestScores.bestReflex)}</p>
           </div>
           <div className="rounded-2xl bg-surface border border-border p-4 transition-all duration-200 hover:border-primary/50">
             <p className="text-xs text-text-secondary uppercase tracking-wider">Best Composite</p>
@@ -210,6 +217,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* History section */}
         <div className="mt-10">
           <h2 className="font-heading text-lg font-semibold text-white tracking-wide">
             Attempt history
@@ -228,6 +236,11 @@ export default function Dashboard() {
 
               {history.map((entry: ScoreWithPercentiles, i: number) => {
                 const rank = getRank(entry.composite_score);
+                // ⭐ Normalize scores for display
+                const displayAim = normalizeAim(entry.aim_score);
+                const displayMovement = normalizeMovement(entry.dex_score);
+                const displayReflex = normalizeReflex(entry.reax_score);
+
                 return (
                   <div
                     key={entry.id}
@@ -239,7 +252,7 @@ export default function Dashboard() {
                     <span className="text-text-secondary">{formatDate(entry.created_at)}</span>
                     
                     <div className="text-center">
-                      <span className="font-heading font-semibold text-white">{entry.aim_score}</span>
+                      <span className="font-heading font-semibold text-white">{displayAim}</span>
                       {entry.aim_percentile !== undefined && (
                         <p className="text-[10px] text-primary-glow/70">
                           {formatPercentile(entry.aim_percentile)}
@@ -248,7 +261,7 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="text-center">
-                      <span className="font-heading font-semibold text-white">{entry.dex_score}</span>
+                      <span className="font-heading font-semibold text-white">{displayMovement}</span>
                       {entry.movement_percentile !== undefined && (
                         <p className="text-[10px] text-primary-glow/70">
                           {formatPercentile(entry.movement_percentile)}
@@ -257,7 +270,7 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="text-center">
-                      <span className="font-heading font-semibold text-white">{entry.reax_score}</span>
+                      <span className="font-heading font-semibold text-white">{displayReflex}</span>
                       {entry.reflex_percentile !== undefined && (
                         <p className="text-[10px] text-primary-glow/70">
                           {formatPercentile(entry.reflex_percentile)}
@@ -287,13 +300,24 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-end">
+        {/* Footer actions */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-end flex-wrap">
           <button
             type="button"
             onClick={() => navigate('/flex-card')}
             className="rounded-xl border border-primary px-6 py-3 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary/10 hover:shadow-primary-glow active:scale-[0.98]"
           >
             View your Flex Card
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/leaderboard')}
+            className="rounded-xl border border-primary px-6 py-3 text-sm font-semibold text-primary transition-all duration-200 hover:bg-primary/10 hover:shadow-primary-glow active:scale-[0.98]"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Trophy className="h-4 w-4" />
+              Leaderboard
+            </span>
           </button>
           <button
             type="button"

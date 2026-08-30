@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crosshair, Move, Zap, LayoutDashboard, CreditCard } from 'lucide-react';
+import { Crosshair, Move, Zap, LayoutDashboard, CreditCard, Trophy, Edit2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useTest } from '@/context/TestContext';
@@ -25,9 +25,17 @@ const tests: { icon: LucideIcon; title: string; desc: string }[] = [
 
 export default function Landing() {
   const navigate = useNavigate();
-  const { setGamertag } = useTest();
-  const [tag, setTag] = useState('');
+  const { setGamertag, gamertag: savedGamertag } = useTest();
+  const [tag, setTag] = useState(savedGamertag || '');
   const [error, setError] = useState('');
+  const [isChangingGamertag, setIsChangingGamertag] = useState(false);
+
+  // Pre-fill input if gamertag exists
+  useEffect(() => {
+    if (savedGamertag) {
+      setTag(savedGamertag);
+    }
+  }, [savedGamertag]);
 
   const handleStart = () => {
     const trimmed = tag.trim();
@@ -37,11 +45,40 @@ export default function Landing() {
     }
     setError('');
     setGamertag(trimmed);
+    setIsChangingGamertag(false);
     navigate('/play/aim');
   };
 
+  const handleChangeGamertag = () => {
+    setIsChangingGamertag(true);
+    setTag('');
+    setError('');
+  };
+
+  const handleCancelChange = () => {
+    setIsChangingGamertag(false);
+    setTag(savedGamertag || '');
+    setError('');
+  };
+
+  const hasGamertag = savedGamertag && savedGamertag.trim() !== '';
+
   return (
     <Layout>
+      {/* ⭐ Change Gamertag Button - Page Top Right Corner */}
+      {hasGamertag && !isChangingGamertag && (
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            type="button"
+            onClick={handleChangeGamertag}
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors duration-200"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+            Change Gamertag
+          </button>
+        </div>
+      )}
+
       <div className="relative flex-1 flex flex-col items-center justify-center px-4 py-16 overflow-hidden">
         {/* Radial purple glow behind logo */}
         <div
@@ -68,25 +105,57 @@ export default function Landing() {
             Do your RankCheck
           </p>
 
-          {/* Gamertag input */}
+          {/* Gamertag Section */}
           <div className="mt-10 w-full max-w-md">
-            <input
-              type="text"
-              value={tag}
-              onChange={(e) => {
-                setTag(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="Enter your gamer tag"
-              className="w-full rounded-xl bg-surface border px-5 py-3.5 text-base text-white placeholder:text-text-secondary/60 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/50 focus:shadow-primary-glow"
-              style={{
-                borderColor: error ? '#f59e0b' : undefined,
-              }}
-            />
-            {error && (
-              <p className="mt-2 text-sm text-amber-400 text-left">
-                {error}
-              </p>
+            {hasGamertag && !isChangingGamertag ? (
+              // Show gamertag display
+              <div className="flex flex-col items-center">
+                <h2
+                  className="font-heading text-4xl sm:text-5xl font-extrabold tracking-wide text-white"
+                  style={{
+                    textShadow: '0 0 30px rgba(168, 85, 247, 0.4)',
+                  }}
+                >
+                  {savedGamertag}
+                </h2>
+                <p className="mt-3 text-lg text-text-secondary">
+                  👋 Welcome back, {savedGamertag}!
+                </p>
+              </div>
+            ) : (
+              // Show input field
+              <div className="w-full">
+                <input
+                  type="text"
+                  value={tag}
+                  onChange={(e) => {
+                    setTag(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="Enter your gamer tag"
+                  className="w-full rounded-xl bg-surface border px-5 py-3.5 text-base text-white placeholder:text-text-secondary/60 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/50 focus:shadow-primary-glow"
+                  style={{
+                    borderColor: error ? '#f59e0b' : undefined,
+                  }}
+                  autoFocus={isChangingGamertag}
+                />
+                {error && (
+                  <p className="mt-2 text-sm text-amber-400 text-left">
+                    {error}
+                  </p>
+                )}
+                {isChangingGamertag && (
+                  <div className="mt-2 flex gap-3 justify-end">
+                    <button
+                      type="button"
+                      onClick={handleCancelChange}
+                      className="text-sm text-text-secondary hover:text-white transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -96,11 +165,13 @@ export default function Landing() {
             onClick={handleStart}
             className="mt-5 w-full max-w-md rounded-xl bg-primary px-6 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-primary-glow hover:shadow-primary-glow-lg hover:scale-[1.02] active:scale-[0.98]"
           >
-            Start the gauntlet
+            {hasGamertag && !isChangingGamertag 
+              ? 'Continue the gauntlet' 
+              : 'Start the gauntlet'}
           </button>
 
           {/* Navigation links */}
-          <div className="mt-6 flex items-center justify-center gap-6">
+          <div className="mt-6 flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
@@ -116,6 +187,14 @@ export default function Landing() {
             >
               <CreditCard className="h-4 w-4" />
               Flex Card
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/leaderboard')}
+              className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors duration-200"
+            >
+              <Trophy className="h-4 w-4" />
+              Leaderboard
             </button>
           </div>
 
@@ -149,7 +228,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border py-5 text-center">
         <p className="text-xs sm:text-sm text-text-secondary tracking-wide">
-          3 tests. 90 seconds. Know where you stand.
+          3 tests. 90 seconds. Know your rank.
         </p>
       </footer>
     </Layout>

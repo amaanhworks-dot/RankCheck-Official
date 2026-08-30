@@ -1,5 +1,7 @@
 import { Crosshair, Move, Zap, Target, Wind } from 'lucide-react';
 import { formatPercentile } from '@/lib/supabase';
+// ⭐ Import ranks from TestContext
+import { RANKS, getRank } from '@/context/TestContext';
 
 type FlexCardProps = {
   gamertag: string;
@@ -16,6 +18,13 @@ type FlexCardProps = {
   compositePercentile?: number;
   isNewBest?: boolean;
 };
+
+// ⭐ Normalize functions
+const normalizeAim = (score: number) => Math.min(Math.round((score / 1000) * 100), 100);
+const normalizeMovement = (score: number) => Math.min(Math.round((score / 60) * 100), 100);
+const normalizeReflex = (score: number) => Math.min(Math.round((score / 1000) * 100), 100);
+
+// ⭐ Remove the local RANKS definition - use imported one
 
 function getStatHighlight(
   aimPercentile: number | undefined,
@@ -93,61 +102,70 @@ export default function FlexCard({
   compositePercentile,
   isNewBest = false,
 }: FlexCardProps) {
+  // ⭐ Use imported getRank to ensure consistency
+  const rank = getRank(compositeScore);
+  // If rankLabel prop is passed, use it; otherwise use the computed rank
+  const displayRankLabel = rankLabel || rank.label;
+  const displayRankColor = rankColor || rank.color;
+
+  const displayAim = normalizeAim(aimScore);
+  const displayMovement = normalizeMovement(movementScore);
+  const displayReflex = normalizeReflex(reflexScore);
+
   const statHighlight = getStatHighlight(aimPercentile, movementPercentile, reflexPercentile);
-  const isTopRank = rankLabel === 'Radiant' || rankLabel === 'Immortal' || rankLabel === 'Diamond';
+  const isTopRank = displayRankLabel === 'Radiant' || displayRankLabel === 'Immortal' || displayRankLabel === 'Diamond';
 
   const stats = [
     { 
       icon: Crosshair, 
       label: 'Aim', 
-      score: aimScore,
+      score: displayAim,
       percentile: aimPercentile,
     },
     { 
       icon: Move, 
       label: 'Movement', 
-      score: movementScore,
+      score: displayMovement,
       percentile: movementPercentile,
     },
     { 
       icon: Zap, 
       label: 'Reflex', 
-      score: reflexScore,
+      score: displayReflex,
       percentile: reflexPercentile,
     },
   ];
 
   return (
     <div
-      className={`relative aspect-[4/5] w-full max-w-[400px] overflow-hidden rounded-2xl bg-surface flex flex-col ${getCardBorderClass(rankLabel)} ${getCardGlowClass(rankLabel)} ${
+      className={`relative aspect-[4/5] w-full max-w-[400px] overflow-hidden rounded-2xl bg-surface flex flex-col ${getCardBorderClass(displayRankLabel)} ${getCardGlowClass(displayRankLabel)} ${
         isNewBest ? 'animate-rank-up' : ''
       }`}
       style={{
         boxShadow: isTopRank
-          ? `0 0 40px ${rankColor}40, inset 0 0 30px ${rankColor}10`
+          ? `0 0 40px ${displayRankColor}40, inset 0 0 30px ${displayRankColor}10`
           : '0 0 40px rgba(168, 85, 247, 0.35), inset 0 0 30px rgba(168, 85, 247, 0.05)',
         transform: 'translateZ(0)',
         backfaceVisibility: 'hidden',
         WebkitFontSmoothing: 'antialiased',
       }}
     >
-      {/* New Best overlay glow + RANK UP text */}
       {isNewBest && (
         <>
           <div className="absolute inset-0 pointer-events-none animate-rank-up-glow">
             <div 
               className="absolute inset-0 rounded-2xl"
               style={{
-                background: `radial-gradient(circle at center, ${rankColor}40 0%, transparent 70%)`,
+                background: `radial-gradient(circle at center, ${displayRankColor}40 0%, transparent 70%)`,
               }}
             />
           </div>
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center animate-rank-up-text">
             <span 
-              className="font-heading text-5xl font-extrabold tracking-wider"
+              className="font-heading text-7xl sm:text-8xl font-extrabold tracking-wider"
               style={{
-                color: rankColor,
-                textShadow: `0 0 40px ${rankColor}80, 0 0 80px ${rankColor}40`,
+                color: displayRankColor,
+                textShadow: `0 0 60px ${displayRankColor}80, 0 0 120px ${displayRankColor}40, 0 0 200px ${displayRankColor}20`,
               }}
             >
               RANK UP!
@@ -156,7 +174,6 @@ export default function FlexCard({
         </>
       )}
 
-      {/* Subtle top gradient overlay */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -207,11 +224,11 @@ export default function FlexCard({
           <p
             className="font-heading text-4xl font-extrabold tracking-tight"
             style={{
-              color: rankColor,
-              textShadow: `0 0 20px ${rankColor}80`,
+              color: displayRankColor,
+              textShadow: `0 0 20px ${displayRankColor}80`,
             }}
           >
-            {rankLabel}
+            {displayRankLabel}
           </p>
           <p className="mt-0.5 text-[10px] tracking-widest text-text-secondary uppercase">
             {compositeScore} COMPOSITE SCORE
@@ -343,14 +360,14 @@ export default function FlexCard({
         }
 
         @keyframes rank-up-text {
-          0% { opacity: 0; transform: scale(0.5); }
-          30% { opacity: 1; transform: scale(1.2); }
+          0% { opacity: 0; transform: scale(0.3); }
+          30% { opacity: 1; transform: scale(1.4); }
           60% { opacity: 1; transform: scale(1); }
           100% { opacity: 0; transform: scale(1); }
         }
 
         .animate-rank-up-text {
-          animation: rank-up-text 1.2s ease-out forwards;
+          animation: rank-up-text 1.4s ease-out forwards;
         }
       `}</style>
     </div>
