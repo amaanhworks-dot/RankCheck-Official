@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Navbar from './Navbar';
+import neonGrid from '@/assets/neon-grid.png';
 
 type TestLayoutProps = {
   step: 1 | 2 | 3;
@@ -19,7 +21,24 @@ export default function TestLayout({
   const progress = (step / TOTAL_STEPS) * 100;
 
   return (
-    <div className="min-h-screen bg-background text-[#f5f5f7] flex flex-col">
+    <div className="min-h-screen bg-background text-[#f5f5f7] flex flex-col relative overflow-hidden">
+      {/* ⭐ Background Image — neon-grid.png (CLEAR, NO BLUR) */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <img
+          src={neonGrid}
+          alt="Background"
+          className="w-full h-full object-cover"
+          style={{
+            opacity: 0.2,
+            // ⭐ REMOVED filter: 'blur(1px)'
+          }}
+        />
+        {/* Dark overlay — keeps it readable */}
+        <div className="absolute inset-0 bg-background/20" />
+      </div>
+
+      <Navbar />
+
       {/* Top bar */}
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between px-4 py-3 sm:px-6">
@@ -37,7 +56,6 @@ export default function TestLayout({
             Test {step} of {TOTAL_STEPS}
           </span>
 
-          {/* Spacer to balance the back button */}
           <div className="w-16" />
         </div>
 
@@ -54,7 +72,7 @@ export default function TestLayout({
       </header>
 
       {/* Content area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 relative z-10">
         {children}
       </main>
 
