@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRef, useEffect, useState } from 'react';
 import TestLayout from '@/components/TestLayout';
 import { useTest } from '@/context/TestContext';
+import { playSound } from '@/utils/sound'; // ⭐ ADDED
 
 // Movement speed in pixels per second
 const MOVEMENT_SPEED = 220;
@@ -50,7 +51,7 @@ export default function MovementTest() {
     totalFrames: 0,
   });
 
-  // ⭐ Key states including Shift
+  // Key states including Shift
   const keysPressed = useRef({ w: false, a: false, s: false, d: false, shift: false });
   
   const animationRef = useRef<number>();
@@ -302,7 +303,7 @@ export default function MovementTest() {
     ctx.shadowBlur = 15;
     ctx.fillText(`${state.score}`, 25, 40);
 
-    // ⭐ SPRINT INDICATOR
+    // SPRINT INDICATOR
     ctx.shadowBlur = 0;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
@@ -371,7 +372,7 @@ export default function MovementTest() {
         dx *= 0.7071;
         dy *= 0.7071;
       }
-      // ⭐ Sprint: Shift key increases speed
+      // Sprint: Shift key increases speed
       const baseSpeed = keysPressed.current.shift ? SPRINT_SPEED : MOVEMENT_SPEED;
       const speed = baseSpeed * deltaTime;
       let newX = state.crosshairX + dx * speed;
@@ -454,6 +455,9 @@ export default function MovementTest() {
   const startTest = () => {
     if (state.isRunning) return;
 
+    // ⭐ Start sound
+    playSound('start');
+
     const canvas = canvasRef.current;
     if (!canvas) {
       console.error('Canvas not ready');
@@ -495,6 +499,9 @@ export default function MovementTest() {
   };
 
   const endTest = () => {
+    // ⭐ End sound
+    playSound('end');
+
     state.isRunning = false;
     state.testCompleted = true;
     
@@ -558,7 +565,6 @@ export default function MovementTest() {
       e.preventDefault();
       keysPressed.current[key as keyof typeof keysPressed.current] = true;
     }
-    // ⭐ Shift key for sprint
     if (key === 'shift') {
       e.preventDefault();
       keysPressed.current.shift = true;
@@ -571,7 +577,6 @@ export default function MovementTest() {
       e.preventDefault();
       keysPressed.current[key as keyof typeof keysPressed.current] = false;
     }
-    // ⭐ Shift key for sprint
     if (key === 'shift') {
       e.preventDefault();
       keysPressed.current.shift = false;

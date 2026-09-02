@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRef, useEffect, useState } from 'react';
 import TestLayout from '@/components/TestLayout';
 import { useTest } from '@/context/TestContext';
+import { playSound } from '@/utils/sound'; // ⭐ ADDED
 
 // Extend Window interface for debugging
 declare global {
@@ -686,12 +687,16 @@ export default function AimTest() {
     }
   };
 
+  // --- CAPTURE FINAL STATS ---
   const captureFinalStats = () => {
+    // ⭐ Play end sound
+    playSound('end');
+
     const rawScore = scoreRef.current;
     const finalScore = Math.round(rawScore * 1.2);
-    // ⭐ Normalize the final score for display
+    // Normalize the final score for display
     const normalizedScore = Math.min(Math.round((finalScore / 1000) * 100), 100);
-
+    
     const finalHits = hitsRef.current;
     const finalShots = shotsRef.current;
     const finalMisses = Math.max(0, finalShots - finalHits);
@@ -701,7 +706,7 @@ export default function AimTest() {
 
     // Update ref synchronously
     finalStatsRef.current = {
-      score: normalizedScore, // ⭐ Store normalized score
+      score: normalizedScore,
       hits: finalHits,
       misses: finalMisses,
       accuracy: finalAccuracy,
@@ -712,8 +717,7 @@ export default function AimTest() {
     // Update state for React re-render
     setFinalStats({ ...finalStatsRef.current });
 
-    // ⭐ Save the RAW score to Context (not normalized)
-    // The composite will normalize it again
+    // Save the RAW score to Context (not normalized)
     scoreRef.current = finalScore;
     setAimScore(finalScore);
 
@@ -813,6 +817,13 @@ export default function AimTest() {
 
   // --- PARTICLE EXPLOSION ---
   const createExplosion = (x: number, y: number, count: number = 40, isAce: boolean = false) => {
+    // ⭐ Play sound based on hit type
+    if (isAce) {
+      playSound('ace');
+    } else {
+      playSound('hit');
+    }
+
     const colors = isAce
       ? ['#ffd700', '#f59e0b', '#ffffff', '#fbbf24']
       : ['#c084fc', '#a855f7', '#ffffff', '#e879f9', '#8b5cf6'];
@@ -893,6 +904,11 @@ export default function AimTest() {
           setMaxCombo(newCombo);
         }
 
+        // ⭐ Combo sound
+        if (newCombo === 3 || newCombo === 6 || newCombo === 10) {
+          playSound('combo');
+        }
+
         let multiplier = 1;
         let comboText = '';
         if (newCombo >= 10) {
@@ -929,6 +945,9 @@ export default function AimTest() {
     }
 
     if (!hit) {
+      // ⭐ Miss sound
+      playSound('miss');
+      
       scoreRef.current -= 5;
       setScore(scoreRef.current);
       comboRef.current = 0;
@@ -948,6 +967,9 @@ export default function AimTest() {
   // --- START TEST ---
   const startTest = () => {
     if (isRunning) return;
+
+    // ⭐ Start sound
+    playSound('start');
 
     // Reset everything including finalStats
     finalStatsRef.current = {
@@ -1120,10 +1142,11 @@ export default function AimTest() {
             type="button"
             onClick={startTest}
             disabled={isRunning}
-            className={`rounded-xl px-6 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${isRunning
+            className={`rounded-xl px-6 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
+              isRunning
                 ? 'border border-border text-text-secondary cursor-not-allowed opacity-50'
                 : 'border border-primary text-primary hover:bg-primary/10 hover:shadow-primary-glow'
-              }`}
+            }`}
           >
             {isRunning ? 'Running...' : 'Start Test'}
           </button>

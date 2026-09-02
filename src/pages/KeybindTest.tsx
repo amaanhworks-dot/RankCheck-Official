@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRef, useEffect, useState } from 'react';
 import TestLayout from '@/components/TestLayout';
 import { useTest } from '@/context/TestContext';
+import { playSound } from '@/utils/sound'; // ⭐ ADDED
 
 // Key pool: 8 common keys + 3 rare keys
 const COMMON_KEYS = ['Q', 'E', 'R', 'F', 'G', 'C', 'V', 'X'];
@@ -209,6 +210,9 @@ export default function KeybindTest() {
         clearTimeout(falsePromptTimeoutRef.current);
         falsePromptTimeoutRef.current = undefined;
       }
+      // ⭐ Miss sound for pressing false prompt
+      playSound('miss');
+      
       scoreRef.current -= 20;
       setScore(scoreRef.current);
       setFeedback('penalty');
@@ -236,6 +240,9 @@ export default function KeybindTest() {
     // --- BOSS KEY HANDLING ---
     if (currentPrompt.isBoss) {
       if (pressedKey === currentPrompt.keys[0]) {
+        // ⭐ Ace sound for boss key
+        playSound('ace');
+        
         if (reactionTime < 200) {
           const points = 10 + 50;
           scoreRef.current += points;
@@ -263,6 +270,9 @@ export default function KeybindTest() {
         }, 500);
         return;
       } else {
+        // ⭐ Miss sound for wrong key on boss
+        playSound('miss');
+        
         scoreRef.current -= 5;
         setScore(scoreRef.current);
         setFeedback('wrong');
@@ -292,6 +302,9 @@ export default function KeybindTest() {
     const expectedKey = currentPrompt.keys[sequenceIndex];
 
     if (pressedKey === expectedKey) {
+      // ⭐ Hit sound for correct key
+      playSound('hit');
+      
       let points = 10;
       const isFast = reactionTime < 300;
       if (isFast) points += 5;
@@ -300,6 +313,11 @@ export default function KeybindTest() {
       comboRef.current = newCombo;
       setCombo(newCombo);
       if (newCombo > maxCombo) setMaxCombo(newCombo);
+
+      // ⭐ Combo sound
+      if (newCombo === 5 || newCombo === 10 || newCombo === 15) {
+        playSound('combo');
+      }
 
       let comboMultiplier = 1;
       if (newCombo >= 15) comboMultiplier = 5;
@@ -322,6 +340,9 @@ export default function KeybindTest() {
         if (isRunningRef.current) showNextPrompt();
       }, isFast ? 300 : 400);
     } else {
+      // ⭐ Miss sound for wrong key
+      playSound('miss');
+      
       scoreRef.current -= 5;
       setScore(scoreRef.current);
       setFeedback('wrong');
@@ -362,6 +383,9 @@ export default function KeybindTest() {
         !isWaitingForNext &&
         feedback !== 'penalty'
       ) {
+        // ⭐ Hit sound for avoiding false prompt (optional, can use 'hit' or a custom sound)
+        playSound('hit');
+        
         scoreRef.current += 5;
         setScore(scoreRef.current);
         setFeedback('avoided');
@@ -427,6 +451,9 @@ export default function KeybindTest() {
   const startTest = () => {
     if (isRunning) return;
 
+    // ⭐ Start sound
+    playSound('start');
+
     // Reset rare key counts
     rareKeyCounts.current = {
       SHIFT: 0,
@@ -478,6 +505,9 @@ export default function KeybindTest() {
 
   // --- END TEST ---
   const endTest = () => {
+    // ⭐ End sound
+    playSound('end');
+
     // 1. Freeze the final raw score
     const rawScore = scoreRef.current;
     // Normalize the score for display
@@ -886,7 +916,6 @@ export default function KeybindTest() {
 
   return (
     <TestLayout step={3} onContinue={() => {
-      // ⭐ Navigate to Results with a flag to refresh leaderboard cache
       navigate('/results', { state: { refreshLeaderboard: true } });
     }}>
       <div className="flex w-full max-w-4xl flex-col items-center">
