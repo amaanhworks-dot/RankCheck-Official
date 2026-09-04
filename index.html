@@ -1,86 +1,85 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <title>RankCheck — Do your RankCheck</title>
-    <meta name="description" content="3 tests. 90 seconds. Know your rank. A brutally addictive mechanical skill benchmark for PC gamers." />
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="RankCheck — Do your RankCheck" />
-    <meta property="og:description" content="3 tests. 90 seconds. Know your rank." />
-    <meta property="og:image" content="https://therankcheck.com/og-image.jpg" />
-    <meta property="og:url" content="https://therankcheck.com" />
-    <meta property="og:type" content="website" />
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="RankCheck — Do your RankCheck" />
-    <meta name="twitter:description" content="3 tests. 90 seconds. Know your rank." />
-    <meta name="twitter:image" content="https://therankcheck.com/og-image.jpg" />
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
 
-    <!-- ⭐ Buy Me a Coffee Button - Bottom Center -->
-    <style>
-      .bmc-button-container {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 9999;
-        text-align: center;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>RankCheck — Do your RankCheck</title>
+  <meta name="description"
+    content="3 tests. 90 seconds. Know your rank. A brutally addictive mechanical skill benchmark for PC gamers." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="RankCheck — Do your RankCheck" />
+  <meta property="og:description" content="3 tests. 90 seconds. Know your rank." />
+  <meta property="og:image" content="https://therankcheck.com/og-image.jpg" />
+  <meta property="og:url" content="https://therankcheck.com" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="RankCheck — Do your RankCheck" />
+  <meta name="twitter:description" content="3 tests. 90 seconds. Know your rank." />
+  <meta name="twitter:image" content="https://therankcheck.com/og-image.jpg" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- ⭐ Buy Me a Coffee Button - Bottom Center -->
+  <style>
+    .bmc-button-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      text-align: center;
+    }
+
+    .bmc-button-container img {
+      height: 48px;
+      width: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .bmc-button-container img:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 640px) {
       .bmc-button-container img {
-        height: 48px;
-        width: auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        transition: transform 0.2s ease;
+        height: 40px;
       }
-      .bmc-button-container img:hover {
-        transform: scale(1.05);
-      }
-      @media (max-width: 640px) {
-        .bmc-button-container img {
-          height: 40px;
-        }
-        .bmc-button-container {
-          bottom: 12px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
 
-    <!-- ⭐ Buy Me a Coffee Button -->
-    <div class="bmc-button-container">
-      <a
-        href="https://buymeacoffee.com/amaanhworkx"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <img
-          src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-          alt="Buy Me A Coffee"
-        />
-      </a>
-    </div>
+      .bmc-button-container {
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
 
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<body>
+  <div id="root"></div>
+
+  <!-- ⭐ Buy Me a Coffee Button -->
+  <div class="bmc-button-container">
+    <a href="https://buymeacoffee.com/amaanhworkx" target="_blank" rel="noopener noreferrer">
+      <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" />
+    </a>
+  </div>
+
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
