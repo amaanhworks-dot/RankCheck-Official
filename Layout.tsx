@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import AnimatedBackground from './AnimatedBackground';
+import { refreshAds, initAllAds } from '@/utils/adScript';
 
 type LayoutProps = {
   children: ReactNode;
@@ -17,13 +18,22 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ⭐ Track page views on route change
+  // ⭐ Initialize ads on first load
   useEffect(() => {
+    initAllAds();
+  }, []);
+
+  // ⭐ Refresh ads on route change
+  useEffect(() => {
+    // Track page view in Google Analytics
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('config', 'G-WZLGX7H9Y0', {
         page_path: location.pathname + location.search,
       });
     }
+
+    // ⭐ Refresh ads on every route change
+    refreshAds();
   }, [location]);
 
   return (

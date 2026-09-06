@@ -1,8 +1,9 @@
 import { ReactNode, useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import Navbar from './Navbar';
 import neonGrid from '@/assets/neon-grid.jpg';
+import { refreshAds, initAllAds } from '@/utils/adScript';
 
 type TestLayoutProps = {
   step: 1 | 2 | 3;
@@ -27,13 +28,21 @@ export default function TestLayout({
   const location = useLocation();
   const progress = (step / TOTAL_STEPS) * 100;
 
-  // ⭐ Track page views on route change
+  // ⭐ Initialize ads on first load
+  useEffect(() => {
+    initAllAds();
+  }, []);
+
+  // ⭐ Refresh ads on route change
   useEffect(() => {
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('config', 'G-WZLGX7H9Y0', {
         page_path: location.pathname + location.search,
       });
     }
+
+    // ⭐ Refresh ads on every route change
+    refreshAds();
   }, [location]);
 
   return (
@@ -44,9 +53,7 @@ export default function TestLayout({
           src={neonGrid}
           alt="Background"
           className="w-full h-full object-cover"
-          style={{
-            opacity: 0.2,
-          }}
+          style={{ opacity: 0.2 }}
         />
         <div className="absolute inset-0 bg-background/20" />
       </div>
